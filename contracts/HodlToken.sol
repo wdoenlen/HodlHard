@@ -49,28 +49,36 @@ contract HodlToken is StandardToken {
         return true;
     }
 
-    // function getDeposits() public returns (Deposit[]) {
-    //     return ethDeposits[msg.sender];
-    // }
+    function withdraw(bytes32 depositId) public returns (bool success) {
+        require(balances[msg.sender] > 0);
 
-    // function withdraw(Deposit d) public returns (bool success) {
-    //     require(balances[msg.sender] > 0);
+        Deposit memory d;
+        Deposit[] deposits = ethDeposits[msg.sender];
+        // Using a for loop here is okay since we don't expect users
+        // to have too many deposits
+        for (var i = 0; i < deposits.length; i++) {
+            if (deposits[i].id == depositId) {
+                d = deposits[i];
+                break;
+            }
 
-    //     if (block.timestamp < d.withdrawDate || d.isWithdrawn) {
-    //         return false;
-    //     }
+            // If this is true then we didn't find the deposit in the
+            // user's deposits list
+            if (i == deposits.length - 1) {
+                return false;
+            }
+        }
+
+        // Don't let users withdraw before due date or withdraw the same
+        // deposit twice
+        if (block.timestamp < d.withdrawDate || d.isWithdrawn) {
+            return false;
+        }
         
-    //     d.isWithdrawn = true;
-    //     balances[msg.sender] -= d.amount;
-    //     msg.sender.transfer(d.amount);
-    //     return true;
-    // }
+        d.isWithdrawn = true;
+        balances[msg.sender] -= d.amount;
+        msg.sender.transfer(d.amount);
+        return true;
+    }
 
-    // function withdraw() public returns (bool success) {
-    //     require(block.timestamp > releaseDates[msg.sender] && 
-    //             etherBalances[msg.sender] > 0);
-    //     msg.sender.transfer(etherBalances[msg.sender]);
-    //     etherBalances[msg.sender] = 0;
-    //     return true;
-    // }
 }
