@@ -13,6 +13,7 @@ contract HodlToken is StandardToken {
 
     struct Deposit {
         bytes32 id;
+        address depositor;
         uint amount;
         uint withdrawDate;
         bool isWithdrawn;
@@ -41,33 +42,18 @@ contract HodlToken is StandardToken {
         require(msg.value > 0);
         uint withdrawDate = block.timestamp + (1 minutes);
         bytes32 depositId = sha256(uint(msg.sender) + withdrawDate);
-        Deposit memory d = Deposit(depositId, msg.value, withdrawDate, false);
+        Deposit memory d = Deposit(
+            depositId, msg.sender, msg.value, withdrawDate, false
+        );
         ethDeposits[msg.sender].push(d);
         DepositEvent(msg.sender, depositId, msg.value, withdrawDate);
         balances[msg.sender] += msg.value;
         return true;
     }
 
-    function withdraw(bytes32 depositId) public returns (bool success) {
-        require(balances[msg.sender] > 0);
-
-        Deposit[] deposits = ethDeposits[msg.sender];
-
-        // Using a for loop here is okay since we don't expect users
-        // to have too many deposits
-        for (var i = 0; i < deposits.length; i++) {
-            if (deposits[i].id == depositId) {
-                Deposit d = deposits[i];
-                break;
-            }
-
-            // If we reach the end of the list then the deposit ID doesn't
-            // exist
-            if (i == deposits.length - 1) {
-                return false;
-            }
-        }
-
+    function _withdraw(Deposit d) internal returns (bool success) {
+        require(balances[msg.sender] > 0 && msg.sender == d.depositor);
+        
         // Don't let users withdraw before due date or withdraw the same
         // deposit twice
         if (block.timestamp < d.withdrawDate || d.isWithdrawn) {
@@ -77,7 +63,25 @@ contract HodlToken is StandardToken {
         d.isWithdrawn = true;
         balances[msg.sender] -= d.amount;
         msg.sender.transfer(d.amount);
-        WithdrawEvent(msg.sender, depositId, d.amount);
+        WithdrawEvent(msg.sender, d.id, d.amount);
+        return true;
+    }
+
+    function withdrawOne(bytes32 depositId) public returns (bool success) {
+        Deposit[] deposits = ethDeposits[msg.sender];
+        for (var i = 0; i < deposits.length; i++) {
+            if (deposits[i].id == depositId) {
+                return _withdraw(deposits[i]);
+            }
+        }
+        return false;
+    }
+
+    function withdrawAll() public returns (bool success) {
+        Deposit[] deposits = ethDeposits[msg.sender];
+        for (var i = 0; i < deposits.length; i++) {
+            _withdraw(deposits[i]);
+        }
         return true;
     }
 
