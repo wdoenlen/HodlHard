@@ -16,7 +16,6 @@ contract HodlToken is StandardToken {
         address depositor;
         uint amount;
         uint withdrawDate;
-        bool isWithdrawn;
     }
 
     // We use DepositEvent as a hack to retrieve deposit IDs later on
@@ -61,11 +60,10 @@ contract HodlToken is StandardToken {
         
         // Don't let users withdraw before due date or withdraw the same
         // deposit twice
-        if (block.timestamp < d.withdrawDate || d.isWithdrawn) {
+        if (block.timestamp < d.withdrawDate) {
             return false;
         }
         
-        d.isWithdrawn = true;
         balances[msg.sender] -= d.amount;
         msg.sender.transfer(d.amount);
         WithdrawEvent(msg.sender, d.id, d.amount);
