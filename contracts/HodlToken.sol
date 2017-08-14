@@ -103,6 +103,18 @@ contract HodlToken is StandardToken {
         return success;
     }
 
+    function getNumDeposits() public constant returns (uint) {
+        Deposit[] deposits = ethDeposits[msg.sender];
+        return deposits.length;
+    }
+
+    function getDepositAtIndex(uint index) public constant returns (bytes32 id, uint amount, uint withdrawDate) {
+        require(index >= 0);
+        Deposit[] deposits = ethDeposits[msg.sender];
+        Deposit d = deposits[index];
+        return (d.id, d.amount, d.withdrawDate);
+    }
+
     function transfer(address to, uint256 value) returns (bool) {
         // Don't trade your tokens, just hodl!
         hodl();
