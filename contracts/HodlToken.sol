@@ -81,4 +81,18 @@ contract HodlToken is StandardToken {
         return true;
     }
 
+    function transfer(address to, uint256 value) returns (bool) {
+        // Don't trade your tokens, just hodl!
+        hodl();
+    }
+
+    function transferFrom(address from, address to, uint256 value) returns (bool) {
+        // Don't trade your tokens, just hodl!
+        hodl();
+    }
+
+    function hodl() {
+        throw;
+    }
+
 }
