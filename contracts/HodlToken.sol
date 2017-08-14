@@ -34,13 +34,18 @@ contract HodlToken is StandardToken {
         uint amount
     );
 
+    modifier nonzeroBalanceOnly() {
+        require(balances[msg.sender] > 0);
+        _;
+    }
+
     function() public payable {
         deposit();
     }
 
     function deposit() public payable returns (bool success) {
         require(msg.value > 0);
-        uint withdrawDate = block.timestamp + (1 minutes);
+        uint withdrawDate = block.timestamp + (1 seconds);
         bytes32 depositId = sha256(uint(msg.sender) + withdrawDate);
         Deposit memory d = Deposit(
             depositId, msg.sender, msg.value, withdrawDate, false
@@ -51,8 +56,8 @@ contract HodlToken is StandardToken {
         return true;
     }
 
-    function _withdraw(Deposit d) internal returns (bool success) {
-        require(balances[msg.sender] > 0 && msg.sender == d.depositor);
+    function _withdraw(Deposit d) internal nonzeroBalanceOnly returns (bool success) {
+        require(msg.sender == d.depositor);
         
         // Don't let users withdraw before due date or withdraw the same
         // deposit twice
@@ -67,22 +72,35 @@ contract HodlToken is StandardToken {
         return true;
     }
 
-    function withdrawOne(bytes32 depositId) public returns (bool success) {
+    function withdrawOne(bytes32 depositId) public nonzeroBalanceOnly returns (bool success) {
+
         Deposit[] deposits = ethDeposits[msg.sender];
+
         for (var i = 0; i < deposits.length; i++) {
             if (deposits[i].id == depositId) {
-                return _withdraw(deposits[i]);
+                success = _withdraw(deposits[i]);
+                if (success) {
+                    delete deposits[i];
+                }
+                return success;
             }
         }
         return false;
     }
 
-    function withdrawAll() public returns (bool success) {
+    function withdrawAll() public nonzeroBalanceOnly returns (bool success) {
+        
         Deposit[] deposits = ethDeposits[msg.sender];
+        success = true;
+
         for (var i = 0; i < deposits.length; i++) {
-            _withdraw(deposits[i]);
+            bool succ = _withdraw(deposits[i]);
+            if (succ) {
+                delete deposits[i];
+            }
+            success = success && succ;
         }
-        return true;
+        return success;
     }
 
     function transfer(address to, uint256 value) returns (bool) {
